@@ -3,7 +3,9 @@ syntax = "proto3";
 
 package ansys.api.speos.testing.v1;
 
-// SpeosRPC Test Service
+import "google/protobuf/timestamp.proto";
+
+// Speos Test Service
 //
 // This service provides automated testing capabilities for Speos result files (XMP and Speos360)
 // using XML templates for result validation. It supports comparison with reference results
@@ -17,10 +19,10 @@ package ansys.api.speos.testing.v1;
 // - Ensures compatibility between current and new XML template versions
 //
 // Coverage Strategy:
-// - Automated combinatorial testing via Speos RPC in Speos One
+// - Automated combinatorial testing in Speos One
 // - Manual testing for viewer display validation (measurements, rules, menus, scales)
 // - Measurement reliability validation (names, values) before making protos public
-service SpeosRPCTestService {
+service SpeosTestService {
 	// Execute a test on result files using an XML template
 	//
 	// This RPC validates result files (XMP or Speos360) against an XML template
@@ -251,6 +253,8 @@ message TestVerdict {
 	int32 skipped_checks = 5;
 
 	// Test score (0.0 to 1.0)
+	// Calculated as: passed_checks / (passed_checks + failed_checks)
+	// A score of 1.0 indicates all checks passed, 0.0 indicates all checks failed
 	double score = 6;
 
 	enum TestStatus {
@@ -366,11 +370,11 @@ message Measurement {
 
 // Test execution information
 message TestExecutionInfo {
-	// Test start time (ISO 8601 format)
-	string start_time = 1;
+	// Test start time
+	google.protobuf.Timestamp start_time = 1;
 
-	// Test end time (ISO 8601 format)
-	string end_time = 2;
+	// Test end time
+	google.protobuf.Timestamp end_time = 2;
 
 	// Test duration in seconds
 	double duration_seconds = 3;
@@ -491,7 +495,9 @@ message ValueConstraints {
 	// Allowed values (for discrete measurements)
 	repeated string allowed_values = 3;
 
-	// Pattern (for string measurements, regex format)
+	// Pattern (for string measurements)
+	// Uses ECMAScript (JavaScript) regular expression syntax
+	// Example: "^[A-Z][a-z]+_[0-9]{3}$" for names like "Sensor_001"
 	optional string pattern = 4;
 }
 

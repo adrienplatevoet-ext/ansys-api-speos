@@ -57,7 +57,7 @@ Measurements undergo rigorous reliability validation via Speos RPC tests:
    - Metadata completeness
 
 2. **Promotion to Public APIs**: Once measurements pass validation:
-   - They are promoted to public protobuf definitions
+   - They are promoted to public Protocol Buffers definitions
    - API contracts are established and versioned
    - Documentation is generated
    - Integration tests are created
