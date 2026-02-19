@@ -212,4 +212,10 @@ This testing framework integrates seamlessly with Speos One for automated testin
 ## Version History
 
 - **v1**: Initial implementation with XMP support, XML template validation, and measurement reliability testing
-- Future: Speos360 file format support, enhanced statistical comparison modes
+
+## Future Enhancements
+
+- Speos360 file format support
+- Enhanced statistical comparison modes
+- Advanced visualization of comparison results
+- Integration with additional testing frameworks
