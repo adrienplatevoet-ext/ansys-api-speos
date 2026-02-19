@@ -1,0 +1,565 @@
+// (c) 2025 ANSYS, Inc. Unauthorized use, distribution, or duplication is prohibited.
+syntax = "proto3";
+
+package ansys.api.speos.testing.v1;
+
+// SpeosRPC Test Service
+//
+// This service provides automated testing capabilities for Speos result files (XMP and Speos360)
+// using XML templates for result validation. It supports comparison with reference results
+// and generates test verdicts based on configurable criteria.
+//
+// Key Features:
+// - Validates result files against XML templates
+// - Compares results with reference data
+// - Generates detailed test verdicts
+// - Supports both XMP and Speos360 file formats
+// - Ensures compatibility between current and new XML template versions
+//
+// Coverage Strategy:
+// - Automated combinatorial testing via Speos RPC in Speos One
+// - Manual testing for viewer display validation (measurements, rules, menus, scales)
+// - Measurement reliability validation (names, values) before making protos public
+service SpeosRPCTestService {
+	// Execute a test on result files using an XML template
+	//
+	// This RPC validates result files (XMP or Speos360) against an XML template
+	// and optionally compares them with reference data to generate a test verdict.
+	// The test function extracts only information available in the new viewer,
+	// ensuring template compatibility.
+	rpc ExecuteTest(TestRequest) returns (TestResponse) {}
+
+	// Execute multiple tests in batch mode
+	//
+	// Allows running multiple test configurations in a single call for
+	// combinatorial testing scenarios in Speos One.
+	rpc ExecuteBatchTests(BatchTestRequest) returns (BatchTestResponse) {}
+
+	// Validate XML template compatibility
+	//
+	// Checks compatibility between current and new XML template versions,
+	// ensuring smooth migration and interoperability.
+	rpc ValidateTemplateCompatibility(TemplateCompatibilityRequest) returns (TemplateCompatibilityResponse) {}
+
+	// Validate measurement reliability
+	//
+	// Validates measurement names, values, and metadata before promoting
+	// measurements to public proto definitions.
+	rpc ValidateMeasurementReliability(MeasurementValidationRequest) returns (MeasurementValidationResponse) {}
+}
+
+// Test execution request
+message TestRequest {
+	// Input result file (XMP or Speos360 format)
+	string result_file_uri = 1;
+
+	// XML template for result validation
+	XmlTemplate xml_template = 2;
+
+	// Optional reference result for comparison
+	optional ReferenceResult reference_result = 3;
+
+	// Test configuration and criteria
+	TestConfiguration test_config = 4;
+
+	// Optional metadata for test tracking
+	map<string, string> metadata = 5;
+}
+
+// Test execution response
+message TestResponse {
+	// Test verdict indicating pass/fail status
+	TestVerdict verdict = 1;
+
+	// Detailed comparison results
+	ComparisonResult comparison_result = 2;
+
+	// Measurements extracted from result file (viewer-compatible)
+	repeated Measurement measurements = 3;
+
+	// Test execution metadata
+	TestExecutionInfo execution_info = 4;
+}
+
+// Batch test execution request
+message BatchTestRequest {
+	// List of test requests to execute
+	repeated TestRequest test_requests = 1;
+
+	// Batch execution configuration
+	BatchConfiguration batch_config = 2;
+}
+
+// Batch test execution response
+message BatchTestResponse {
+	// Individual test responses
+	repeated TestResponse test_responses = 1;
+
+	// Overall batch summary
+	BatchSummary batch_summary = 2;
+}
+
+// Template compatibility validation request
+message TemplateCompatibilityRequest {
+	// Current XML template version
+	XmlTemplate current_template = 1;
+
+	// New XML template version
+	XmlTemplate new_template = 2;
+}
+
+// Template compatibility validation response
+message TemplateCompatibilityResponse {
+	// Compatibility status
+	bool is_compatible = 1;
+
+	// Detailed compatibility report
+	repeated CompatibilityIssue compatibility_issues = 2;
+
+	// Mapping between current and new template fields
+	repeated FieldMapping field_mappings = 3;
+}
+
+// Measurement reliability validation request
+message MeasurementValidationRequest {
+	// Result file containing measurements
+	string result_file_uri = 1;
+
+	// Expected measurement definitions
+	repeated MeasurementDefinition expected_measurements = 2;
+
+	// Validation criteria
+	ValidationCriteria validation_criteria = 3;
+}
+
+// Measurement reliability validation response
+message MeasurementValidationResponse {
+	// Overall validation status
+	bool is_valid = 1;
+
+	// Validated measurements ready for public proto
+	repeated Measurement validated_measurements = 2;
+
+	// Validation issues found
+	repeated ValidationIssue validation_issues = 3;
+
+	// Recommendations for proto definition
+	repeated ProtoRecommendation proto_recommendations = 4;
+}
+
+// XML template definition
+message XmlTemplate {
+	// Template content (XML format)
+	string template_content = 1;
+
+	// Template version identifier
+	string version = 2;
+
+	// Fields to extract (only those available in new viewer)
+	repeated TemplateField fields = 3;
+
+	// Template metadata
+	map<string, string> metadata = 4;
+}
+
+// Template field definition
+message TemplateField {
+	// Field name
+	string name = 1;
+
+	// Field type
+	FieldType type = 2;
+
+	// Field path in XML
+	string xml_path = 3;
+
+	// Whether field is required
+	bool required = 4;
+
+	// Whether field is available in new viewer
+	bool viewer_compatible = 5;
+
+	enum FieldType {
+		FIELD_TYPE_UNSPECIFIED = 0;
+		FIELD_TYPE_STRING = 1;
+		FIELD_TYPE_DOUBLE = 2;
+		FIELD_TYPE_INT32 = 3;
+		FIELD_TYPE_BOOL = 4;
+		FIELD_TYPE_MEASUREMENT = 5;
+		FIELD_TYPE_RULE = 6;
+		FIELD_TYPE_SCALE = 7;
+	}
+}
+
+// Reference result for comparison
+message ReferenceResult {
+	// Reference file URI
+	string reference_file_uri = 1;
+
+	// Expected measurements
+	repeated Measurement expected_measurements = 2;
+
+	// Tolerance configuration
+	ToleranceConfig tolerance_config = 3;
+}
+
+// Test configuration
+message TestConfiguration {
+	// Comparison mode
+	ComparisonMode comparison_mode = 1;
+
+	// Tolerance settings
+	ToleranceConfig tolerance_config = 2;
+
+	// Fields to validate
+	repeated string fields_to_validate = 3;
+
+	// Whether to include visual validation
+	bool include_visual_validation = 4;
+
+	enum ComparisonMode {
+		COMPARISON_MODE_UNSPECIFIED = 0;
+		COMPARISON_MODE_EXACT = 1;
+		COMPARISON_MODE_TOLERANCE = 2;
+		COMPARISON_MODE_STATISTICAL = 3;
+	}
+}
+
+// Tolerance configuration
+message ToleranceConfig {
+	// Absolute tolerance for numeric values
+	double absolute_tolerance = 1;
+
+	// Relative tolerance (percentage) for numeric values
+	double relative_tolerance = 2;
+
+	// Field-specific tolerances
+	map<string, double> field_tolerances = 3;
+}
+
+// Test verdict
+message TestVerdict {
+	// Overall test status
+	TestStatus status = 1;
+
+	// Verdict message
+	string message = 2;
+
+	// Pass/fail counts
+	int32 passed_checks = 3;
+	int32 failed_checks = 4;
+	int32 skipped_checks = 5;
+
+	// Test score (0.0 to 1.0)
+	double score = 6;
+
+	enum TestStatus {
+		TEST_STATUS_UNSPECIFIED = 0;
+		TEST_STATUS_PASSED = 1;
+		TEST_STATUS_FAILED = 2;
+		TEST_STATUS_WARNING = 3;
+		TEST_STATUS_ERROR = 4;
+		TEST_STATUS_SKIPPED = 5;
+	}
+}
+
+// Comparison result details
+message ComparisonResult {
+	// Field comparison results
+	repeated FieldComparison field_comparisons = 1;
+
+	// Measurement comparison results
+	repeated MeasurementComparison measurement_comparisons = 2;
+
+	// Overall comparison summary
+	ComparisonSummary summary = 3;
+}
+
+// Field comparison
+message FieldComparison {
+	// Field name
+	string field_name = 1;
+
+	// Expected value
+	string expected_value = 2;
+
+	// Actual value
+	string actual_value = 3;
+
+	// Match status
+	bool matches = 4;
+
+	// Difference (for numeric values)
+	optional double difference = 5;
+
+	// Relative difference percentage
+	optional double relative_difference_percent = 6;
+}
+
+// Measurement comparison
+message MeasurementComparison {
+	// Measurement name
+	string measurement_name = 1;
+
+	// Expected measurement
+	Measurement expected = 2;
+
+	// Actual measurement
+	Measurement actual = 3;
+
+	// Match status
+	bool matches = 4;
+
+	// Differences found
+	repeated string differences = 5;
+}
+
+// Comparison summary
+message ComparisonSummary {
+	// Total comparisons performed
+	int32 total_comparisons = 1;
+
+	// Number of matches
+	int32 matches = 2;
+
+	// Number of mismatches
+	int32 mismatches = 3;
+
+	// Critical mismatches (outside tolerance)
+	int32 critical_mismatches = 4;
+}
+
+// Measurement definition
+message Measurement {
+	// Measurement name
+	string name = 1;
+
+	// Measurement value
+	oneof value {
+		double numeric_value = 2;
+		string string_value = 3;
+		bool boolean_value = 4;
+	}
+
+	// Measurement unit
+	string unit = 5;
+
+	// Measurement type
+	MeasurementType type = 6;
+
+	// Measurement metadata
+	map<string, string> metadata = 7;
+
+	// Whether this measurement is viewer-compatible
+	bool viewer_compatible = 8;
+
+	enum MeasurementType {
+		MEASUREMENT_TYPE_UNSPECIFIED = 0;
+		MEASUREMENT_TYPE_IRRADIANCE = 1;
+		MEASUREMENT_TYPE_INTENSITY = 2;
+		MEASUREMENT_TYPE_RADIANCE = 3;
+		MEASUREMENT_TYPE_VISUAL = 4;
+		MEASUREMENT_TYPE_TEMPERATURE = 5;
+		MEASUREMENT_TYPE_CUSTOM = 6;
+	}
+}
+
+// Test execution information
+message TestExecutionInfo {
+	// Test start time (ISO 8601 format)
+	string start_time = 1;
+
+	// Test end time (ISO 8601 format)
+	string end_time = 2;
+
+	// Test duration in seconds
+	double duration_seconds = 3;
+
+	// Test executor information
+	string executor = 4;
+
+	// Test environment
+	map<string, string> environment = 5;
+}
+
+// Batch configuration
+message BatchConfiguration {
+	// Whether to stop on first failure
+	bool stop_on_failure = 1;
+
+	// Parallel execution settings
+	int32 parallel_workers = 2;
+
+	// Timeout per test in seconds
+	double timeout_seconds = 3;
+}
+
+// Batch summary
+message BatchSummary {
+	// Total tests executed
+	int32 total_tests = 1;
+
+	// Tests passed
+	int32 passed_tests = 2;
+
+	// Tests failed
+	int32 failed_tests = 3;
+
+	// Tests skipped
+	int32 skipped_tests = 4;
+
+	// Overall batch status
+	TestVerdict.TestStatus overall_status = 5;
+
+	// Total execution time
+	double total_duration_seconds = 6;
+}
+
+// Compatibility issue
+message CompatibilityIssue {
+	// Issue severity
+	IssueSeverity severity = 1;
+
+	// Issue description
+	string description = 2;
+
+	// Affected field
+	string field_name = 3;
+
+	// Recommended action
+	string recommended_action = 4;
+
+	enum IssueSeverity {
+		ISSUE_SEVERITY_UNSPECIFIED = 0;
+		ISSUE_SEVERITY_INFO = 1;
+		ISSUE_SEVERITY_WARNING = 2;
+		ISSUE_SEVERITY_ERROR = 3;
+		ISSUE_SEVERITY_CRITICAL = 4;
+	}
+}
+
+// Field mapping between template versions
+message FieldMapping {
+	// Source field name (current template)
+	string source_field = 1;
+
+	// Target field name (new template)
+	string target_field = 2;
+
+	// Mapping type
+	MappingType mapping_type = 3;
+
+	// Conversion function (if applicable)
+	optional string conversion_function = 4;
+
+	enum MappingType {
+		MAPPING_TYPE_UNSPECIFIED = 0;
+		MAPPING_TYPE_DIRECT = 1;
+		MAPPING_TYPE_RENAMED = 2;
+		MAPPING_TYPE_TRANSFORMED = 3;
+		MAPPING_TYPE_DEPRECATED = 4;
+		MAPPING_TYPE_NEW = 5;
+	}
+}
+
+// Measurement definition for validation
+message MeasurementDefinition {
+	// Measurement name
+	string name = 1;
+
+	// Expected type
+	Measurement.MeasurementType expected_type = 2;
+
+	// Expected unit
+	string expected_unit = 3;
+
+	// Value constraints
+	ValueConstraints constraints = 4;
+
+	// Whether this is a required measurement
+	bool required = 5;
+}
+
+// Value constraints for measurements
+message ValueConstraints {
+	// Minimum value (for numeric measurements)
+	optional double min_value = 1;
+
+	// Maximum value (for numeric measurements)
+	optional double max_value = 2;
+
+	// Allowed values (for discrete measurements)
+	repeated string allowed_values = 3;
+
+	// Pattern (for string measurements, regex format)
+	optional string pattern = 4;
+}
+
+// Validation criteria
+message ValidationCriteria {
+	// Strictness level
+	StrictnessLevel strictness = 1;
+
+	// Whether to validate names
+	bool validate_names = 2;
+
+	// Whether to validate values
+	bool validate_values = 3;
+
+	// Whether to validate units
+	bool validate_units = 4;
+
+	// Whether to validate metadata
+	bool validate_metadata = 5;
+
+	enum StrictnessLevel {
+		STRICTNESS_LEVEL_UNSPECIFIED = 0;
+		STRICTNESS_LEVEL_LENIENT = 1;
+		STRICTNESS_LEVEL_MODERATE = 2;
+		STRICTNESS_LEVEL_STRICT = 3;
+	}
+}
+
+// Validation issue
+message ValidationIssue {
+	// Issue type
+	IssueType type = 1;
+
+	// Affected measurement
+	string measurement_name = 2;
+
+	// Issue description
+	string description = 3;
+
+	// Issue severity
+	CompatibilityIssue.IssueSeverity severity = 4;
+
+	enum IssueType {
+		ISSUE_TYPE_UNSPECIFIED = 0;
+		ISSUE_TYPE_MISSING_MEASUREMENT = 1;
+		ISSUE_TYPE_INVALID_NAME = 2;
+		ISSUE_TYPE_INVALID_VALUE = 3;
+		ISSUE_TYPE_INVALID_UNIT = 4;
+		ISSUE_TYPE_INVALID_TYPE = 5;
+		ISSUE_TYPE_VALUE_OUT_OF_RANGE = 6;
+		ISSUE_TYPE_METADATA_MISMATCH = 7;
+	}
+}
+
+// Proto recommendation
+message ProtoRecommendation {
+	// Recommended proto field name
+	string field_name = 1;
+
+	// Recommended proto field type
+	string field_type = 2;
+
+	// Field documentation
+	string documentation = 3;
+
+	// Whether field should be optional
+	bool optional = 4;
+
+	// Suggested field number
+	int32 suggested_field_number = 5;
+}
